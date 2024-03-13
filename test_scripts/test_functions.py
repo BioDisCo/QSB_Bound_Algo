@@ -15,7 +15,7 @@ def idk():
     S = Simulation(A | B)
     interval = {A: [1, 5], B: [1, 5]}
     J = Jump_chain_qsd_bound(S, interval)
-    J.animate_bound()
+    J.calculate_bound()
 idk()
 
 def idk_2():

@@ -18,8 +18,8 @@ from mobspy.modules.mobspy_parameters import *
 import timeit
 
 
-def extract_reaction_rate(combination_of_reactant_species, reactant_string_list
-                          , reaction_rate_function, type_of_model, dimension, function_rate_arguments,
+def extract_reaction_rate(combination_of_reactant_species, reactant_string_list,
+                          reaction_rate_function, type_of_model, dimension, function_rate_arguments,
                           parameter_exist, parameters_in_reaction, skip_check):
     """
         This function is responsible for returning the reaction rate string for the model construction. To do this it

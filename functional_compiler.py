@@ -1,5 +1,7 @@
 import time
+import timeit
 
+from assign import Assign
 import matplotlib.pyplot as plt
 import mobspy.modules.meta_class_utils as mcu
 import numpy as np
@@ -21,7 +23,7 @@ import joblib
 import re
 import scipy.linalg as sclig
 import bound_animator as ba
-from numba import njit, float64
+from numba import njit, float64, int64, void
 
 
 def q_compile(simulation_object):
@@ -146,14 +148,23 @@ def q_matrix_generator(set_species_model, reactions_for_q, interval, exit_direct
     interval = process_initial_counts_dict(interval)
 
     for spe in set_species_model:
-        if spe not in interval.keys():
+        if spe not in interval.keys() and not isinstance(interval[spe], Assign):
             simlog.error("Species: " + str(spe) + "\n"
                                                   "There is a species on the simulation whose interval was not specified")
+
+    assignments = {}
+    for spe in interval:
+        if isinstance(interval[spe], Assign):
+            assignments[spe] = interval[spe]
 
     all_value_combinations = []
     species_order_index = {}
     for i, spe in enumerate(sorted(interval.keys())):
         species_order_index[spe] = i
+
+        if spe in assignments:
+            continue
+
         if interval[spe][0] <= interval[spe][1]:
             l_v = list(range(interval[spe][0], interval[spe][1] + 1))
         else:
@@ -172,9 +183,9 @@ def q_matrix_generator(set_species_model, reactions_for_q, interval, exit_direct
         state_index_to_spe[comb], spe_to_state_index[i] = i, comb
 
     row_gen = lambda i, state: q_row_generation(state, reactions_for_q, state_index_to_spe, species_order_index,
-                                                rev_exit_direction)
-    q_matrix = Parallel(n_jobs=-1, prefer="threads")(delayed(row_gen)(state_index_to_spe[state], state)
-                                                     for state in state_index_to_spe.keys())
+                                                rev_exit_direction, assignments)
+    q_matrix = Parallel(n_jobs=1, prefer="threads")(delayed(row_gen)(state_index_to_spe[state], state)
+                                                    for state in state_index_to_spe.keys())
     q_matrix.append([0 for _ in range(len(state_index_to_spe) + 1)])
 
     q_matrix = np.array(q_matrix)
@@ -182,33 +193,47 @@ def q_matrix_generator(set_species_model, reactions_for_q, interval, exit_direct
     for i, row in enumerate(q_matrix):
         q_matrix[i, i] = - sum(row)
 
-    return q_matrix, state_index_to_spe, species_order_index
+    return q_matrix, state_index_to_spe, species_order_index, assignments
 
 
-def q_row_generation(state, reactions_for_q, state_index_to_spe, species_order_index, rev_exit_direction):
+def q_row_generation(state, reactions_for_q, state_index_to_spe, species_order_index, rev_exit_direction,
+                     assignments):
     q_row = np.zeros(len(state_index_to_spe) + 1)
+
+    # TODO not compatible with meta-species with queries
+    assignements_pre_order = []
+    for spe_1, assig in assignments.items():
+        index_for_assg = []
+        for spe_2 in assig.species:
+            index_for_assg.append(species_order_index[str(spe_2)])
+        species_value = assig.assignment(*[state[i] for i in index_for_assg])
+        assignements_pre_order.append((str(spe_1), species_value))
+    w_assg_state = list(state)
+    for e in sorted(assignements_pre_order):
+        w_assg_state.append(e[1])
+    w_assg_state = tuple(w_assg_state)
 
     for _, reaction in reactions_for_q.items():
 
         index_of_species_values_in_state = []
         for reactant in reaction['reactants']:
-            index_of_species_values_in_state.append(species_order_index[reactant])
+            index_of_species_values_in_state.append(species_order_index[reactant.replace('_dot_', '.')])
 
-        state_for_reaction = [state[i] for i in index_of_species_values_in_state]
+        state_for_reaction = [w_assg_state[i] for i in index_of_species_values_in_state]
         state_for_reaction = tuple(state_for_reaction[0: reaction['argument_number']])
 
         q_value = reaction['rate_function'](state_for_reaction)
 
-        new_state = list(state)
+        new_state = list(w_assg_state)
         for spe, delta in reaction['delta_species'].items():
-            i = species_order_index[spe]
-            new_state[i] = state[i] + delta
-        new_state = tuple(new_state)
+            i = species_order_index[spe.replace('_dot_', '.')]
+            new_state[i] = w_assg_state[i] + delta
+        new_state = tuple(new_state[0:len(state)])
 
         # If the rate is inside interval, we add it to the state transition
         try:
             j = state_index_to_spe[new_state]
-            q_row[j] = q_value
+            q_row[j] = q_row[j] + q_value
         # If not, we add it to the final absorbing state
         except KeyError:
             flag = False
@@ -321,27 +346,15 @@ def construct_jump_chain(q_matrix):
     return J
 
 
-# @TODO Write here
-def construct_cols_for_multiplication(q_matrix):
-
-    non_zero_indexes = []
-    for i in range(len(q_matrix)):
-        col = []
-        for j in range(len(q_matrix)):
-            if q_matrix[j, i] > 0:
-                col.append(j)
-        non_zero_indexes.append(col)
-
-    return non_zero_indexes
-
-
-def bound_estimator(initial_counts, state_index_to_spe, q_matrix, species_order_index,
+def bound_estimator(initial_counts, state_index_to_spe, q_matrix, species_order_index, assignments=(),
                     time_for_stationary_calculation=1e10,
                     max_iterations_per_diameter=1000, animation=False,
                     probability_epsilon_bound=1e-5,
                     stopping_probability=1e-5,
-                    time_for_decay_estimation=1):
+                    time_for_decay_estimation=1,
+                    check_steps=1, verbose=True):
     initial_state = convert_initial_counts_to_initial_state(initial_counts)
+    initial_state = initial_state[0:len(assignments)]
 
     try:
         initial_state_index = state_index_to_spe[initial_state]
@@ -378,6 +391,7 @@ def bound_estimator(initial_counts, state_index_to_spe, q_matrix, species_order_
     qsd = np.zeros((len(q_matrix)))
     qsd[0] = 1
 
+    print('Calculating QSD') if verbose else 0
     t = time_for_stationary_calculation
     qsd = np.matmul(qsd, sclig.expm(t * conditional_q_matrix))
     q_array = deepcopy(qsd)
@@ -388,7 +402,6 @@ def bound_estimator(initial_counts, state_index_to_spe, q_matrix, species_order_
 
     # Construct the jump chain from the q_chain
     j_matrix = construct_jump_chain(q_matrix)
-    index_for_mul_matrix = construct_cols_for_multiplication(q_matrix)
 
     # Animation of the bound calculation in effect
     if animation:
@@ -397,7 +410,7 @@ def bound_estimator(initial_counts, state_index_to_spe, q_matrix, species_order_
     bound_array = np.matmul(ind, j_matrix)
 
     # the function bellow calculates one step of the bound
-    @njit
+    @njit(void(float64[:], float64[:]))
     def process_bound_q(bound_array, q_array):
         for i in range(len(q_array)):
             bound_val, q_val = bound_array[i], q_array[i]
@@ -410,87 +423,106 @@ def bound_estimator(initial_counts, state_index_to_spe, q_matrix, species_order_
                     bound_array[i] = bound_val - q_val
                     q_array[i] = 0
 
-    # Define my own matrix multiplication function to speed the process even further
-    # It uses the fact that most indexes from matrix q are zero in CRNs
-    @njit
-    def faster_matrix_multiplication(bound_array, j_matrix, new_array, index_for_mul_matrix):
-        for i in range(len(index_for_mul_matrix)):
-            col = index_for_mul_matrix[i]
-            soma = 0
-            for index in col:
-                soma = soma + bound_array[index]*j_matrix[index]
+    # Define my own matrix multiplication function to speed the process with njit
+    # This function and the bound calculator are critical for code speed, thus they need to be as fast as possible
+    @njit(float64[:](float64[:], float64[:, :], float64[:], int64))
+    def faster_matrix_multiplication(bound_array, j_matrix, new_array, matrix_len):
+        for i in range(matrix_len):
+            soma = 0.0
+            for j in range(matrix_len):
+                soma = soma + bound_array[j] * j_matrix[j, i]
             new_array[i] = soma
         return new_array
 
     max_iterations = max_iterations_per_diameter * len(q_matrix)
 
+    print('Calculating Bound') if verbose else 0
     k, bound_sum = 0, 0
-    a = time.time()
     while k < max_iterations:
 
         process_bound_q(bound_array, q_array)
-        new_array = np.zeros(len(bound_array))
-        bound_array = faster_matrix_multiplication(bound_array, j_matrix, new_array, faster_matrix_multiplication)
+        new_array = np.zeros(len(bound_array), dtype='float64')
+        bound_array = faster_matrix_multiplication(bound_array, j_matrix, new_array, len(j_matrix))
 
         k += 1
-        if k % len(q_matrix) == 0:
+        if k % check_steps == 0:
             previous_bound_sum = bound_sum
             bound_sum = sum(bound_array)
             if abs(bound_sum - previous_bound_sum) * 100 <= probability_epsilon_bound:
                 break
             if sum(bound_array) * 100 <= stopping_probability:
                 break
-    b = time.time()
-    print(b - a)
-    exit()
 
-    print(sum(bound_array))
-    print(abs(bound_sum - previous_bound_sum))
-    print(k, sum(q_array))
-    exit()
-
-    bound_sum = sum(bound_array)
+    bound_sum = sum(bound_array) * 100
+    copy_q = deepcopy(q_matrix)
 
     # Here we estimate P(T > t) to calculate the decay parameter
     # With the decay parameter, we have the biggest non-zero eigenvalue
     # Prediction of qsds
-    pe = 1 - np.matmul(qsd, sclig.expm(time_for_decay_estimation * q_matrix))[-1]
-    decay_parameter = - np.log(pe) / time_for_decay_estimation
+    pe = 1 - np.matmul(qsd, sclig.expm(time_for_decay_estimation * copy_q))[-1]
+    cul_factor = 1
+    time_broke = False
+    while pe > 0.9999999999999999:
+        if not time_broke:
+            pe = 1 - np.matmul(qsd, sclig.expm(time_for_decay_estimation * copy_q))[-1]
+            if pe < 0 or np.isnan(pe):
+                pe = 1
+                time_broke = True
+                time_for_decay_estimation = time_for_decay_estimation/10
+            else:
+                time_for_decay_estimation = 10*time_for_decay_estimation
+        else:
+            pe = 1
+            break
+
+    if pe != 1:
+        decay_parameter = - np.log(pe) / time_for_decay_estimation
+        decay_parameter = decay_parameter*cul_factor
+    else:
+        decay_parameter = np.inf
 
     return bound_sum, decay_parameter, qsd
 
 
 class Jump_chain_qsd_bound:
 
-    def __init__(self, simulation_object, interval, exit_direction=None):
+    def __init__(self, simulation_object, interval, exit_direction=None, verbose=True):
         self.exit_direction = exit_direction
         self.simulation_object = simulation_object
         self.interval = interval
         self.species, self.counts, self.functional_rate_model = q_compile(simulation_object)
+        self.verbose = verbose
 
         # q_matrix, state_to_index = q_matrix_generator(species, resulting_comp, interval)
-        self.q_matrix, self.state_to_index, self.species_order_index = q_matrix_generator(self.species,
-                                                                                          self.functional_rate_model,
-                                                                                          self.interval,
-                                                                                          self.exit_direction)
+        print('Compiling Q-Matrix') if self.verbose else 0
+        self.q_matrix, self.state_to_index, self.species_order_index, self.assignments \
+            = q_matrix_generator(self.species,
+                                 self.functional_rate_model,
+                                 self.interval,
+                                 self.exit_direction)
 
         self.bound_constant, self.decay_parameter, self.qsd = None, None, None
 
     def calculate_bound(self, time_for_stationary_calculation=1e10, max_iterations_per_diameter=1000, animation=False,
                         probability_epsilon_bound=1e-5, stopping_probability=1e-5, time_for_decay_estimation=1):
 
+        print('Starting Bound Estimation') if self.verbose else 0
+
         self.bound_constant, self.decay_parameter, \
         self.qsd = bound_estimator(self.counts, self.state_to_index,
                                    self.q_matrix,
                                    self.species_order_index,
+                                   self.assignments,
                                    time_for_stationary_calculation=time_for_stationary_calculation,
                                    max_iterations_per_diameter=max_iterations_per_diameter,
-                                   animation=False,
+                                   animation=animation,
                                    probability_epsilon_bound=probability_epsilon_bound,
                                    stopping_probability=stopping_probability,
-                                   time_for_decay_estimation=time_for_decay_estimation)
+                                   time_for_decay_estimation=time_for_decay_estimation,
+                                   check_steps=10, verbose=self.verbose)
 
-        print(self.bound_constant, self.decay_parameter)
+        message = 'Probability: ' + str(self.bound_constant) + ' %', ' Decay: ' + str(self.decay_parameter)
+        print(message) if self.verbose else 0
         return self.bound_constant, self.decay_parameter
 
     def animate_bound(self, animation=True):

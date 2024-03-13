@@ -116,8 +116,8 @@ def bound_calculation(AHL_count=0):
     model = set_counts({LacI: 45, TetR: 0, IPTG: 0, AHL: 1})
     interval = {LacI: [100, 10], TetR: [0, 8], IPTG: [0, 0], AHL: [1, 1]}
     S = Simulation(model)
-    exit_direction = {LacI: 'bellow'}
-    J = Jump_chain_qsd_bound(S, interval, exit_direction)
+    # exit_direction = {LacI: 'bellow'}
+    J = Jump_chain_qsd_bound(S, interval)
     J.calculate_bound()
 # bound_calculation()
 
