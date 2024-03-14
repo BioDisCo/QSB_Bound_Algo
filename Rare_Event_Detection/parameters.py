@@ -3,11 +3,10 @@ import numpy as np
 
 ######################################################
 # Parameters
-K = 50
 # TODO write V
-# K = 8e7-8e8 (or even lower values are possible) cells/mL
-P = 120
-# P = 1e8-1e9 cells/mL
+P = 200
+K = 0.4*P
+
 
 n = 4
 

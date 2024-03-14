@@ -352,7 +352,7 @@ def bound_estimator(initial_counts, state_index_to_spe, q_matrix, species_order_
                     probability_epsilon_bound=1e-5,
                     stopping_probability=1e-5,
                     time_for_decay_estimation=1,
-                    check_steps=1, verbose=True):
+                    check_steps=1, verbose=True, only_qsd=False,  qsd=None):
     initial_state = convert_initial_counts_to_initial_state(initial_counts)
     initial_state = initial_state[0:len(assignments)]
 
@@ -393,7 +393,12 @@ def bound_estimator(initial_counts, state_index_to_spe, q_matrix, species_order_
 
     print('Calculating QSD') if verbose else 0
     t = time_for_stationary_calculation
-    qsd = np.matmul(qsd, sclig.expm(t * conditional_q_matrix))
+    if qsd is None or only_qsd:
+        qsd = np.matmul(qsd, sclig.expm(t * conditional_q_matrix))
+
+    if only_qsd:
+        return qsd
+
     q_array = deepcopy(qsd)
 
     # ind - initial distribution
@@ -468,16 +473,16 @@ def bound_estimator(initial_counts, state_index_to_spe, q_matrix, species_order_
             if pe < 0 or np.isnan(pe):
                 pe = 1
                 time_broke = True
-                time_for_decay_estimation = time_for_decay_estimation/10
+                time_for_decay_estimation = time_for_decay_estimation / 10
             else:
-                time_for_decay_estimation = 10*time_for_decay_estimation
+                time_for_decay_estimation = 10 * time_for_decay_estimation
         else:
             pe = 1
             break
 
     if pe != 1:
         decay_parameter = - np.log(pe) / time_for_decay_estimation
-        decay_parameter = decay_parameter*cul_factor
+        decay_parameter = decay_parameter * cul_factor
     else:
         decay_parameter = np.inf
 
@@ -519,7 +524,7 @@ class Jump_chain_qsd_bound:
                                    probability_epsilon_bound=probability_epsilon_bound,
                                    stopping_probability=stopping_probability,
                                    time_for_decay_estimation=time_for_decay_estimation,
-                                   check_steps=10, verbose=self.verbose)
+                                   check_steps=10, verbose=self.verbose, only_qsd=False, qsd=self.qsd)
 
         message = 'Probability: ' + str(self.bound_constant) + ' %', ' Decay: ' + str(self.decay_parameter)
         print(message) if self.verbose else 0
@@ -530,6 +535,17 @@ class Jump_chain_qsd_bound:
         self.bound_constant, self.decay_parameter, self.qsd = bound_estimator(self.counts, self.state_to_index,
                                                                               self.q_matrix, self.species_order_index,
                                                                               animation=True)
+
+    def calculate_qsd(self):
+        self.qsd = bound_estimator(self.counts, self.state_to_index, self.q_matrix, self.species_order_index,
+                                   self.assignments, only_qsd=True)
+        return self.qsd
+
+    def conditional_q_matrix(self):
+        conditional_q_matrix = deepcopy(np.asarray(self.q_matrix))
+        conditional_q_matrix[:, -1] = 0
+        self.conditional_q_matrix = conditional_q_matrix
+        return self.conditional_q_matrix
 
     def plot_qsd(self):
         if self.qsd is not None:
