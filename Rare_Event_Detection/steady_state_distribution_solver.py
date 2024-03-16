@@ -25,6 +25,13 @@ for i in range(1, P):
 state_vector.reverse()
 
 plt.plot(state_vector)
+plt.title(r"Steady State Distribution")
+plt.xlabel("H (count)")
+plt.ylabel("State Probability")
+plt.tight_layout()
+
+plt.savefig("figures/ssd_figure.png")
+
 plt.show()
 
 

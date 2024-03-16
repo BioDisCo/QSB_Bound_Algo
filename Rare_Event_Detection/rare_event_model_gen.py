@@ -31,7 +31,7 @@ def find_unstable_equilibrium_point(p, K, plot_bd=False):
     return eq_point
 
 
-def return_re_model(sigma=sigma, p=p, k=k, K=K, n=n, pop=P, reverse=False, full=False):
+def return_re_model(sigma=sigma, p=p, k=k, K=K, n=n, pop=P, reverse=False, full=False, initial_dist=None):
     L, H = BaseSpecies()
 
     L >> H[sigma]
@@ -44,10 +44,14 @@ def return_re_model(sigma=sigma, p=p, k=k, K=K, n=n, pop=P, reverse=False, full=
         eq_point = P
         reverse = False
 
-    if not reverse:
-        L(pop), H(0)
+    if initial_dist is None:
+        if not reverse:
+            L(pop), H(0)
+        else:
+            L(0), H(pop)
     else:
-        L(0), H(pop)
+        H(initial_dist), L(pop - initial_dist)
+
     S = Simulation(L | H)
 
     def H_from_L(h):
