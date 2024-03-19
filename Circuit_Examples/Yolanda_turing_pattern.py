@@ -2,6 +2,7 @@ from mobspy import *
 from functional_compiler import Jump_chain_qsd_bound
 import matplotlib.pyplot as plt
 import numpy as np
+import pickle as pkl
 
 # I need assignments for this model
 
@@ -30,6 +31,9 @@ nt = 2.29
 na = 1.61
 nl = 2.17
 # 44 and 12
+#######
+by, bx, Ki, Kt, Kl, Ka, dy, dx, nt, na, nl = 43.8, 36.2, 2.22, 27.4*5, \
+                                             4.17*5, 0.133*0.05, 1, 1, 2.29, 1.61, 2.17
 
 LacI, TetR, IPTG, AHL = BaseSpecies()
 
@@ -38,7 +42,8 @@ TetR >> TetR + LacI [lambda r: repression_rate(r, None, None, by, Kt, nt, None, 
 TetR >> Zero [dx]
 
 # TetR repression and LacI
-LacI + IPTG + AHL >> LacI + IPTG + AHL + TetR [lambda r, r2, r3: repression_rate(r, r2, r3, bx, Kl, nl, Ki, Ka, na)]
+rate_f = lambda r, r2, r3: repression_rate(r, r2, r3, bx, Kl, nl, Ki, Ka, na)
+LacI + IPTG + AHL >> LacI + IPTG + AHL + TetR [rate_f]
 LacI >> Zero [dy]
 
 def repression_rate(r, r2, r3, b, K, n, K_I, K_ahl, n_ahl):
@@ -47,6 +52,10 @@ def repression_rate(r, r2, r3, b, K, n, K_I, K_ahl, n_ahl):
     if r3 is not None:
         f = (K_ahl*r3)**n_ahl/(1 + (K_ahl*r3)**n_ahl)
     return b/(1 + (K*r)**n)*f if r3 is not None else b/(1 + (K*r)**n)
+
+model = set_counts({LacI: 45, TetR: 0, IPTG: 0, AHL: 1})
+Sim = Simulation(model)
+
 
 # Starting from red initial state
 def verify_hysteresis():
@@ -114,12 +123,64 @@ def verify_steady_states():
 # Hardest one to do
 def bound_calculation(AHL_count=0):
     model = set_counts({LacI: 45, TetR: 0, IPTG: 0, AHL: 1})
-    interval = {LacI: [100, 10], TetR: [0, 8], IPTG: [0, 0], AHL: [1, 1]}
+    interval = {LacI: [200, 10], TetR: [0, 8], IPTG: [0, 0], AHL: [1, 1]}
     S = Simulation(model)
     # exit_direction = {LacI: 'bellow'}
     J = Jump_chain_qsd_bound(S, interval)
     J.calculate_bound()
 # bound_calculation()
+
+def partial_qsd_calculation():
+    model = set_counts({LacI: 45, TetR: 0, IPTG: 0, AHL: 1})
+    interval = {LacI: [200, 10], TetR: [0, 8], IPTG: [0, 0], AHL: [1, 1]}
+    S = Simulation(model)
+    # exit_direction = {LacI: 'bellow'}
+    J = Jump_chain_qsd_bound(S, interval)
+    qsd = J.partial_qsd(LacI)
+    plt.plot([_ for _ in range(10, 200 + 1)], qsd)
+
+    plt.title('Partial QSD of LacI')
+    plt.ylabel('LacI State Probability')
+    plt.xlabel('LacI (counts)')
+
+    plt.savefig('figures/yolanda_partial_qsd.png')
+    plt.show()
+
+
+def leaving_probability_data():
+    model = set_counts({LacI: 45, TetR: 0, IPTG: 0, AHL: 1})
+    S = Simulation(model)
+    S.method = 'directmethod'
+    S.duration = 1/7.453531375456242e-09
+    S.repetitions = 1000
+    S.plot_data = False
+    S.run()
+
+    # Cannot be simulated error
+
+    with open('figures/yolanda_switch.pkl', 'wb') as f:
+        pkl.dump(Sim.results, f)
+
+
+def compare_probabilities():
+
+    with open('figures/yolanda_switch.pkl', 'rb') as f:
+        res = pkl.load(f)
+
+    positive_run = 0
+    for Ll, Lt in zip(res[LacI], res[TetR]):
+
+        for l, t in zip(Ll, Lt):
+            if l < 10 or l > 200:
+                positive_run += 1
+                break
+            if t > 8:
+                positive_run += 1
+                break
+
+    print(positive_run/len(res[LacI]))
+    print(np.exp(1/7.453531375456242e-09*-7.453531375456242e-09))
+
 
 if __name__ == '__main__':
     pass
@@ -127,4 +188,7 @@ if __name__ == '__main__':
     # verify_irreversibility()
     # verify_switching()
     # verify_steady_states()
-    bound_calculation()
+    # bound_calculation()
+    # leaving_probability_data()
+    # compare_probabilities()
+    partial_qsd_calculation()

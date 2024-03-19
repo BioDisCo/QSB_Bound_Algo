@@ -2,11 +2,9 @@ import matplotlib.pyplot as plt
 from mobspy import *
 from assign import Assign
 from math import ceil
-import numpy as np
 from functional_compiler import Jump_chain_qsd_bound
 from rate_functions import *
-import utils_rare_event as ure
-from tqdm import tqdm
+
 
 def find_unstable_equilibrium_point(p, K, plot_bd=False):
     Hl = [float(x) for x in np.linspace(0, p, 100)]

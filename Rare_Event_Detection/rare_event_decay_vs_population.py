@@ -1,12 +1,5 @@
-import matplotlib.pyplot as plt
-from mobspy import *
-from assign import Assign
-from math import ceil
-import numpy as np
-from functional_compiler import Jump_chain_qsd_bound
 from rate_functions import *
 import utils_rare_event as ure
-from tqdm import tqdm
 import rare_event_model_gen as rgen
 
 def false_ratio(reverse=False):
@@ -55,7 +48,7 @@ def false_ratio(reverse=False):
 
     print(latex_code)
     return latex_code
-# false_ratio(reverse=True)
+false_ratio(reverse=True)
 
 def find_decays_specific():
     pop = 150
@@ -67,7 +60,7 @@ def find_decays_specific():
     p_f = np.exp(-d_f * 24) * 100
 
     print(f'Decay Back: {d_b}, Decay Foward: {d_f}, P_b: {p_b}, P_f: {p_f}')
-find_decays_specific()
+# find_decays_specific()
 
 
 

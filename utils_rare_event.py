@@ -1,3 +1,5 @@
+import scipy.linalg as sclig
+import numpy as np
 
 def round_to_significant(number, decimals, base_number=0):
 
@@ -12,4 +14,7 @@ def round_to_significant(number, decimals, base_number=0):
     else:
         return str(number)
 
+
+def calculate_distribution(d, t, Q):
+    return np.matmul(d, sclig.expm(t * Q))
 
