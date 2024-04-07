@@ -38,8 +38,10 @@ def transform_callable_rate(reacting_meta_species, reactant_string_list, reactio
 
         return reaction_rate(*species_arguments)
 
-    return lambda r: rate_function(argument_number, reaction_rate, reacting_meta_species, reactant_string_list, r), \
-           argument_number
+    to_return_function = \
+        lambda r: rate_function(argument_number, reaction_rate, reacting_meta_species, reactant_string_list, r)
+
+    return to_return_function, argument_number
 
 
 def create_rate_function(reacting_meta_species, reactant_string_list, reaction_rate, dimension):

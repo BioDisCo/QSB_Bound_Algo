@@ -15,9 +15,9 @@ class Species_Argument_For_Callable(Specific_Species_Operator):
 
     def __radd__(self, other):
         if isinstance(other, Species_Argument_For_Callable):
-            return self.count + other.count
+            return other.count + self.count
         else:
-            return self.count + other
+            return other + self.count
 
     def __sub__(self, other):
         if isinstance(other, Species_Argument_For_Callable):
@@ -27,9 +27,9 @@ class Species_Argument_For_Callable(Specific_Species_Operator):
 
     def __rsub__(self, other):
         if isinstance(other, Species_Argument_For_Callable):
-            return self.count - other.count
+            return other.count - self.count
         else:
-            return self.count - other
+            return other - self.count
 
     def __mul__(self, other):
         if isinstance(other, Species_Argument_For_Callable):
@@ -39,9 +39,9 @@ class Species_Argument_For_Callable(Specific_Species_Operator):
 
     def __rmul__(self, other):
         if isinstance(other, Species_Argument_For_Callable):
-            return self.count*other.count
+            return other.count*self.count
         else:
-            return self.count*other
+            return other*self.count
 
     def __truediv__(self, other):
         if isinstance(other, Species_Argument_For_Callable):

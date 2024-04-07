@@ -26,7 +26,7 @@ def run_model():
 def bound_calculation(initial_state):
     S1(initial_state), S2(0), P1(promoter_number), P2(promoter_number)
 
-    interval = {S1: [0, int(initial_count * f_1)],
+    interval = {S1: [int(initial_count * f_2), int(initial_count * f_1)],
                 S2: [0, int(initial_count * f_3)],
                 P1: [promoter_number, promoter_number],
                 P2: [promoter_number, promoter_number]}
@@ -41,7 +41,7 @@ def A_data_generation():
     for i in [50, 30, 10, 0]:
         S1(i), S2(0), P1(promoter_number), P2(promoter_number)
 
-        interval = {S1: [0, int(initial_count * f_1)],
+        interval = {S1: [int(initial_count * f_3), int(initial_count * f_1)],
                     S2: [0, int(initial_count * f_3)],
                     P1: [promoter_number, promoter_number],
                     P2: [promoter_number, promoter_number]}
@@ -149,6 +149,8 @@ def qsd_comparison():
             distance += d_step
         x.append(io)
         y.append(d_step)
+    plt.plot(x, y)
+    plt.show()
     print(distance)
 qsd_comparison()
 
