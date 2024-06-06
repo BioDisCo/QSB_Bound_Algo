@@ -30,7 +30,7 @@ plt.xlabel("H (count)")
 plt.ylabel("State Probability")
 plt.tight_layout()
 
-plt.savefig("figures/ssd_figure.png")
+plt.savefig("figures/ssd_figure.pdf")
 
 plt.show()
 

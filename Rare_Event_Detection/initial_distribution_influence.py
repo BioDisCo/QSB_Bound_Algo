@@ -53,6 +53,15 @@ axes[1, 0].axvline(x=7, color='gray', linestyle='--', linewidth=1)
 axes[1, 0].axvline(x=47.5, color='gray', linestyle='--', linewidth=1)
 axes[1, 0].axvline(x=139, color='gray', linestyle='--', linewidth=1)
 
+b_d = sum_l(set_rate(Hl, s=3), amp_rate(Hl))
+b_d = sum_l(b_d, neg(reset_rate(Hl)))
+
+axes[1, 1].plot(Hl, b_d)
+axes[1, 1].plot(Hl, zero_line(Hl))
+axes[1, 1].set_title(r"Equilibrium Point Estimation")
+axes[1, 1].set_xlabel("H")
+axes[1, 1].set_ylabel("Set Rate + Hold Rate - Reset Rate")
+
 plt.tight_layout()
 plt.savefig("figures/initial_distribution.png")
 plt.show()

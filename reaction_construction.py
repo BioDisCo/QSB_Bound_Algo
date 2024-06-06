@@ -7,9 +7,11 @@ import itertools
 import mobspy.modules.meta_class as mc
 import mobspy.simulation_logging.log_scripts as simlog
 import mobspy.modules.species_string_generator as ssg
-from inspect import signature
+import inspect
+from mobspy.modules.mobspy_expressions import ExpressionDefiner
 from mobspy.modules.order_operators import Default
 from mobspy.modules.mobspy_parameters import *
+from mobspy import u
 
 
 def iterator_for_combinations(list_of_lists):
@@ -259,13 +261,13 @@ def get_involved_species(reaction, meta_species_in_model):
 
 
 def construct_rate_function_arguments(rate_function, reaction):
-    rate_function_arguments = str(signature(rate_function))
+    rate_function_arguments = str(inspect.signature(rate_function))
 
     black_list = ['*', '=']
     if any(i in rate_function_arguments for i in black_list):
         simlog.error(f'Rate arguments must not contain = or *. \n'
                      f'Error in reaction {reaction}. \n'
-                     f'Error in rate function {rate_function} in signature {str(signature(rate_function))}')
+                     f'Error in rate function {rate_function} in signature {str(inspect.signature(rate_function))}')
 
     rate_function_arguments = str(rate_function_arguments).replace('(', '')
     rate_function_arguments = str(rate_function_arguments).replace(')', '')

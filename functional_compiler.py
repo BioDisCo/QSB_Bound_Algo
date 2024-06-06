@@ -13,6 +13,7 @@ from mobspy.modules.order_operators import *
 import mobspy.modules.event_functions as eh
 from mobspy.modules.logic_operator_objects import *
 import mobspy.modules.species_string_generator as ssg
+import mobspy.modules.unit_handler as uh
 from copy import deepcopy
 from mobspy.modules.mobspy_parameters import *
 from mobspy.modules.mobspy_expressions import *

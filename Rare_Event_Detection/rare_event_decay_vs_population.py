@@ -3,19 +3,8 @@ import utils_rare_event as ure
 import rare_event_model_gen as rgen
 
 def false_ratio(reverse=False):
-    if not reverse:
-        latex_code = '\\begin{table}[h!]\n' + '\label{table:decay_parameters_vs_pop}\n' + \
-                     '\\begin{tabular}{|l|l|l|l|l|}\n' \
-                     + '\hline\n' + 'P   & $\lambda$, $K = 0.3 \cdot P$   & $\lambda$, $K = 0.5 \cdot P$ ' \
-                     '  & $P_d(T^- > 24\\text{h})$, $K = 0.3 ' \
-                     '\cdot P$  &  $P_d(T^- > 24\\text{h})$, $K = 0.5 \cdot P$ \\\\\n'
-    else:
-        latex_code = '\\begin{table}[h!]\n' + '\label{table:decay_parameters_vs_pop}\n' + \
-                     '\\begin{tabular}{|l|l|l|l|l|}\n' \
-                     + '\hline\n' + 'P   & $K = 0.3 \cdot P$   & $K = 0.5 \cdot P$ ' \
-                     '  & $P_d(T^+ > 24\\text{h})$, $K = 0.3 ' \
-                     '\cdot P$  &  $P_d(T^+ > 24\\text{h})$, $K = 0.5 \cdot P$ \\\\\n'
 
+    latex_code = ''
     # Pop_values = [int(x) for x in np.linspace(20, 150, 10)]
     Pop_values = [20, 60, 100, 140, 180]
     decay_30 = {}
@@ -30,7 +19,7 @@ def false_ratio(reverse=False):
         else:
             prob_50[pop] = 100
 
-        d_50 = rgen.return_re_model(pop=pop, K=0.3*pop, reverse=reverse).calculate_bound()[1]
+        d_50 = rgen.return_re_model(pop=pop, K=0.5*pop, reverse=reverse).calculate_bound()[1]
         decay_50[pop] = d_50
         if not np.isinf(d_50):
             prob_50[pop] = np.exp(-d_50*24)*100
@@ -43,8 +32,6 @@ def false_ratio(reverse=False):
                      f' ${ure.round_to_significant(prob_50[pop], 2, 1)}$' \
                      f' \\\\\n'
         latex_code += latex_line
-
-    latex_code = latex_code + '\hline\n' + '\\end{tabular}\n' + '\\end{table}\n'
 
     print(latex_code)
     return latex_code

@@ -3,11 +3,12 @@ import mobspy.modules.reaction_construction_nb as rc
 from pint import Quantity
 from mobspy.modules.mobspy_parameters import *
 from called_argument_class import Species_Argument_For_Callable
+from mobspy.modules.mobspy_expressions import ExpressionDefiner
 import inspect
 
 
 def mass_action_kinetics(reactant_string_list, reaction_rate):
-    counts = rc.count_string_dictionary(reactant_string_list)
+    counts = rc.mcu_count_string_dictionary(reactant_string_list)
 
     def rate_function(counts, args):
         to_return = reaction_rate

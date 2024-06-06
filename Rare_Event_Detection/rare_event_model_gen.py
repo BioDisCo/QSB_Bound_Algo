@@ -7,7 +7,8 @@ from rate_functions import *
 
 
 def find_unstable_equilibrium_point(p, K, plot_bd=False):
-    Hl = [float(x) for x in np.linspace(0, p, 100)]
+
+    Hl = [float(x) for x in np.linspace(0, p, 1000)]
 
     b_d = sum_l(set_rate(Hl, P=p), amp_rate(Hl, K=K, P=p))
     b_d = sum_l(b_d, neg(reset_rate(Hl)))

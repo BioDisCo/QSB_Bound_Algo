@@ -20,7 +20,7 @@ fig, axes = plt.subplots(2, 2, figsize=(10, 8))
 
 d_minus = np.zeros(len(Q_full))
 d_minus[0] = 1
-d_minus = calculate_distribution(d_minus, 1e12)
+d_minus = calculate_distribution(d_minus, 1000)
 
 # Plot 1
 axes[0, 0].plot([i for i in range(len(Q_full))], d_minus, label=r'$d_{H0}$')
@@ -50,7 +50,7 @@ axes[0, 1].set_ylabel("State Probability")
 
 d_plus = np.zeros(len(Q_full))
 d_plus[P] = 1
-d_plus = calculate_distribution(d_plus, 500)
+d_plus = calculate_distribution(d_plus, 1000)
 
 # Plot 3
 axes[1, 0].plot([i for i in range(len(Q_full))], d_plus, label=r'$d_{HP}$')
