@@ -1,6 +1,6 @@
 from mobspy import *
-from assign import Assign
-from functional_compiler import q_compile, q_matrix_generator, bound_estimator, Jump_chain_qsd_bound
+from ..assign import Assign
+from ..functional_compiler import q_compile, q_matrix_generator, bound_estimator, Jump_chain_qsd_bound
 
 # Parameters
 K = 50
