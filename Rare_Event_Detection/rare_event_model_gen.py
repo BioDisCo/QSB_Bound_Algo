@@ -1,3 +1,8 @@
+import sys
+import os
+# Add parent directory to path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import matplotlib.pyplot as plt
 from mobspy import *
 from assign import Assign
