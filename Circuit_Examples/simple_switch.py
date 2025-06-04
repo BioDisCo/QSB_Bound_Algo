@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 from mobspy import *
 import numpy as np
+
+
 from functional_compiler import q_compile, q_matrix_generator, bound_estimator, Jump_chain_qsd_bound
 import pickle as pkl
 import utils_rare_event as ure
@@ -10,10 +12,10 @@ initial_count, promoter_number = 30, 30
 P1, P2, Mortal = BaseSpecies()
 S1, S2 = New(Mortal)
 
-Mortal >> Zero [0.001]
+Mortal >> Zero [0.1]
 
-S2 + P1 >> S2 + P1 + S1[lambda s, p: 0.001*p*1/(1 + (s/10)**4)]
-S1 + P2 >> S1 + P2 + S2[lambda s, p: 0.001*p*1/(1 + (s/10)**4)]
+S2 + P1 >> S2 + P1 + S1[lambda s, p: 0.1*p*1/(1 + (s/10)**2)]
+S1 + P2 >> S1 + P2 + S2[lambda s, p: 0.1*p*1/(1 + (s/10)**2)]
 
 S1(initial_count), S2(0), P1(promoter_number), P2(promoter_number)
 Sim = Simulation(S1 | S2 | P1 | P2)
@@ -184,4 +186,7 @@ def Compare_Probabilities():
     print(np.exp(1/4.3820718429521486e-07*-4.3820718429521486e-07))
 # Compare_Probabilities()
 
+
+if __name__ == '__main__':
+    bound_calculation(30)
 
