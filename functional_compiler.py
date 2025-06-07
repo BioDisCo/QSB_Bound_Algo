@@ -188,20 +188,27 @@ def q_matrix_generator(set_species_model, reactions_for_q, interval, exit_direct
     for i, comb in enumerate(itertools.product(*all_value_combinations)):
         state_index_to_spe[comb], spe_to_state_index[i] = i, comb
 
-    row_gen = lambda i, state: q_row_generation(state, reactions_for_q, state_index_to_spe, species_order_index,
-                                                rev_exit_direction, assignments)
+    n_states = len(state_index_to_spe)
+    q_matrix = lil_matrix((n_states + 1, n_states + 1))  # +1 for absorbing state
 
-    q_matrix = Parallel(n_jobs=1, prefer="threads")(delayed(row_gen)(state_index_to_spe[state], state)
-                                                    for state in state_index_to_spe.keys())
+    # Generate and insert rows one at a time
+    for state, i in state_index_to_spe.items():
+        row = q_row_generation(state, reactions_for_q, state_index_to_spe,
+                               species_order_index, rev_exit_direction, assignments)
 
-    q_matrix = np.array(q_matrix)
-    absorbing_row = np.zeros((1, q_matrix.shape[1]))  # Match the number of columns
-    q_matrix = np.vstack([q_matrix, absorbing_row])
+        # Insert non-zero elements directly into sparse matrix
+        row_sum = 0
+        for j, val in row.items():
+            if j == -1:  # Absorbing state
+                q_matrix[i, n_states] = val
+            else:
+                q_matrix[i, j] = val
+            row_sum += val
 
-    for i, row in enumerate(q_matrix):
-        q_matrix[i, i] = - sum(row)
+        # Set diagonal
+        q_matrix[i, i] = -row_sum
 
-    q_matrix = csr_matrix(q_matrix)
+    q_matrix = q_matrix.tocsr()
 
     return q_matrix, state_index_to_spe, species_order_index, assignments
 
@@ -209,7 +216,8 @@ def q_matrix_generator(set_species_model, reactions_for_q, interval, exit_direct
 def q_row_generation(state, reactions_for_q, state_index_to_spe, species_order_index, rev_exit_direction,
                      assignments):
 
-    q_row = np.zeros(len(state_index_to_spe) + 1)
+    q_row_dict = {}
+    q_row_dict[-1] = 0
 
     # TODO not compatible with meta-species with queries
     assignements_pre_order = []
@@ -243,11 +251,19 @@ def q_row_generation(state, reactions_for_q, state_index_to_spe, species_order_i
         new_state = tuple(new_state[0:len(state)])
 
         # If the rate is inside interval, we add it to the state transition
+        to_absorbing_state = False
         try:
             j = state_index_to_spe[new_state]
-            q_row[j] = q_row[j] + q_value
-        # If not, we add it to the final absorbing state
         except KeyError:
+            to_absorbing_state = True
+
+        if not to_absorbing_state:
+            try:
+                q_row_dict[j] = q_row_dict[j] + q_value
+            except KeyError:
+                q_row_dict[j] = q_value
+        else:
+        # If not, we add it to the final absorbing state
             flag = False
             for key in rev_exit_direction:
                 new_value = new_state[key]
@@ -258,9 +274,9 @@ def q_row_generation(state, reactions_for_q, state_index_to_spe, species_order_i
                     flag = True
                     break
             if not flag:
-                q_row[-1] = q_row[-1] + q_value
+                q_row_dict[-1] = q_row_dict[-1] + q_value
 
-    return q_row
+    return q_row_dict
 
 
 def process_initial_counts_dict(initial_counts):
@@ -364,7 +380,7 @@ def construct_jump_chain(q_matrix):
 
 def bound_estimator(initial_counts, state_index_to_spe, q_matrix, species_order_index, assignments=(),
                     time_for_stationary_calculation=1e10,
-                    max_iterations_per_diameter=1000, animation=False,
+                    max_iterations_per_diameter=5, animation=False,
                     probability_epsilon_bound=1e-5,
                     stopping_probability=1e-5,
                     time_for_decay_estimation=1,
@@ -382,21 +398,11 @@ def bound_estimator(initial_counts, state_index_to_spe, q_matrix, species_order_
     # The conditional q_matrix refers to the probability of not leaving the interval through the absorbed state
     # The absorbed state is represented by the last index in the matrix
 
-    conditional_q_matrix = deepcopy(q_matrix)
-    conditional_q_matrix = lil_matrix(conditional_q_matrix)
-    # Remove row and col leading to absorbing state
-    conditional_q_matrix = conditional_q_matrix[:-1, :-1]
-
-    # Remove last row and column (absorbing state)
-    # conditional_q_matrix = conditional_q_matrix[:-1, :-1]
-
-    for i in range(conditional_q_matrix.shape[0]):
-        conditional_q_matrix[i, i] = 0
-        row = conditional_q_matrix[i, :]
-        conditional_q_matrix[i, i] = -row.sum()
-
-    conditional_q_matrix = csr_matrix(conditional_q_matrix)
-
+    conditional_q_matrix = q_matrix[:-1, :-1].tolil()
+    conditional_q_matrix.setdiag(0)  # Set diagonal to zeros
+    row_sums = np.array(conditional_q_matrix.sum(axis=1)).flatten()  # Sum rows (now excluding diagonal)
+    conditional_q_matrix.setdiag(-row_sums)  # Set diagonal to negative row sums
+    conditional_q_matrix = conditional_q_matrix.tocsr()
 
     bol, forward_states, backward_states = check_connectivity(conditional_q_matrix)
     if bol:
@@ -429,7 +435,9 @@ def bound_estimator(initial_counts, state_index_to_spe, q_matrix, species_order_
         qsd = np.abs(qsd)
         qsd = qsd / qsd.sum()
 
+
         residual = qsd @ conditional_q_matrix
+
         if sum(residual) > 1e-13:
             raise Exception('Could not find the zero eigenvalue of the Q-matrix')
 
@@ -528,7 +536,7 @@ class Jump_chain_qsd_bound:
 
         self.bound_constant, self.decay_parameter, self.qsd = None, None, None
 
-    def calculate_bound(self, time_for_stationary_calculation=1e10, max_iterations_per_diameter=1000, animation=False,
+    def calculate_bound(self, time_for_stationary_calculation=1e10, max_iterations_per_diameter=5, animation=False,
                         probability_epsilon_bound=1e-5, stopping_probability=1e-5, time_for_decay_estimation=1):
 
         print('Starting Bound Estimation') if self.verbose else 0

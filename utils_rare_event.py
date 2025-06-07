@@ -1,5 +1,8 @@
 import scipy.linalg as sclig
 import numpy as np
+import scipy.sparse.linalg as sps_linalg # Import the sparse linear algebra module
+from scipy.sparse import csr_matrix, csc_matrix # You might explicitly check the type, but expm_multiply handles various sparse formats
+
 
 
 def round_to_significant(number, decimals=2, zero_threshold=1e-15):
@@ -46,5 +49,7 @@ def round_to_significant(number, decimals=2, zero_threshold=1e-15):
 
 
 def calculate_distribution(d, t, Q):
-    return np.matmul(d, sclig.expm(t * Q))
+    d_col_vector = d.reshape(-1, 1)
+    evolved_col_vector = sps_linalg.expm_multiply(t * Q.T, d_col_vector)
+    return evolved_col_vector.flatten()
 
