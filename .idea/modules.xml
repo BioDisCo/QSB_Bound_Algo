@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/Circuit_Examples/.idea/Circuit_Examples.iml" filepath="$PROJECT_DIR$/Circuit_Examples/.idea/Circuit_Examples.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Rare_Event_Detection/.idea/Rare_Event_Detection.iml" filepath="$PROJECT_DIR$/Rare_Event_Detection/.idea/Rare_Event_Detection.iml" />
+      <module fileurl="file://$PROJECT_DIR$/figures/.idea/figures.iml" filepath="$PROJECT_DIR$/figures/.idea/figures.iml" />
+      <module fileurl="file://$PROJECT_DIR$/test_scripts/.idea/test_scripts.iml" filepath="$PROJECT_DIR$/test_scripts/.idea/test_scripts.iml" />
+    </modules>
+  </component>
+</project>
