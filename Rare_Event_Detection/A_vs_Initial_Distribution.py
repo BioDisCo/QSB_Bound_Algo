@@ -2,7 +2,8 @@ import rare_event_model_gen as rgen
 from parameters import *
 import scipy.linalg as sclig
 import numpy as np
-import utils_rare_event as ure
+from ..utils_rare_event import round_to_significant as ure_round_to_significant
+
 
 
 latex_line = '\\begin{table}[h] \n\\label{table:A_vs_L1_qsd}\n\\begin{tabular}{|l|l|l|}\n\hline\n' \
@@ -37,7 +38,8 @@ for i in initial_values:
 
     S = sum(dif_minus)
 
-    latex_line +=  f'$H={i}$   & ${ure.round_to_significant(A, 2)}$   & ${ure.round_to_significant(S, 2)}$  \\\\\hline\n'
+    latex_line +=  (f'$H={i}$   & ${ure_round_to_significant(A, 2)}$   '
+                    f'& ${ure_round_to_significant(S, 2)}$  \\\\\hline\n')
 
 print()
 latex_line += '\end{tabular} \n\end{table}'

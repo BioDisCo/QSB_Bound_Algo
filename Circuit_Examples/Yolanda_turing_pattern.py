@@ -1,4 +1,9 @@
 from mobspy import *
+
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from functional_compiler import Jump_chain_qsd_bound
 import matplotlib.pyplot as plt
 import numpy as np
@@ -188,7 +193,7 @@ if __name__ == '__main__':
     # verify_irreversibility()
     # verify_switching()
     # verify_steady_states()
-    # bound_calculation()
+    bound_calculation()
     # leaving_probability_data()
     # compare_probabilities()
-    partial_qsd_calculation()
+    # partial_qsd_calculation()
