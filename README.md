@@ -104,6 +104,7 @@ exit_direction = {S1: 'below'}
 ```
 
 If `exit_direction` is omitted, all exits from the interval are treated as faults.
+> **⚠️ Warning: When specifying `exit_direction`, the bound no longer carries a formal mathematical guarantee. Only use `exit_direction` when the probability of leaving the interval through the excluded boundary is negligible.**
 
 ### Step 4 — Construct the bound object and run
 
