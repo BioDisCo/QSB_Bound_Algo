@@ -24,6 +24,8 @@ This library computes a **mathematically rigorous upper bound** on that probabil
 
 the algorithm returns a probability value `p` such that the true fault probability is guaranteed to be smaller than `p`
 
+To do so, it uses quasi-stationary distribution theory and the transition rate matrix Q from Markov Chains. Please refer to the paper for a more indepth explanation.
+
 ---
 
 ## Installation
