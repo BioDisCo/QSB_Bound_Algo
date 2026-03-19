@@ -268,8 +268,6 @@ If necessary contact Fabricio Cravo by email at fabriciocravo [at] gmail [dot] c
 **Matthias Fuegger** — CNRS, LMF, ENS Paris-Saclay
 **Thomas Nowak** — CNRS, LMF, ENS Paris-Saclay
 
-Contact: f.cravogomes@northeastern.edu
-
 ---
 
 ## License
